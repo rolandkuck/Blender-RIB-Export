@@ -1,11 +1,14 @@
+import string
 
 def parse(input):
     tokens = []
-    while True:
-        split_list = input.split(None, 1) 
-        token = split_list[0]
-        tokens.append((token, None))
-        if len(split_list) > 1:
-            input = split_list[1]
+    name = ''
+    for c in input:
+        if c in string.whitespace:
+            if name != '':
+                tokens.append( (name, None) )
+                name = ''
         else:
-            return tokens
+            name += c
+    tokens.append( (name, None) )
+    return tokens

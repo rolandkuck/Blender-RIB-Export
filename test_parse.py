@@ -9,9 +9,14 @@ class TestParse(unittest.TestCase):
         self.assertEqual(parse.parse(in_str), in_tokens)
 
     def testParseNames_Space(self):
-        in_str = " One   Two  Three "
+        in_str = " One   Two  Three"
         in_tokens = [ ("One", None), ("Two", None), ("Three", None) ]
         self.assertEqual(parse.parse(in_str), in_tokens)
+
+    def testParseStrings(self):
+        in_str = ' One "Two"  Three "Four"'
+        in_tokens = [ ("One", ["Two",]), ("Three", ["Four",]) ]
+        #self.assertEqual(parse.parse(in_str), in_tokens)
 
     def testParseComplex(self):
         in_str = """Declare "squish" "uniform float"
