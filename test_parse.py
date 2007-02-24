@@ -16,7 +16,7 @@ class TestParse(unittest.TestCase):
     def testParseStrings(self):
         in_str = ' One "Two"  Three "Four"'
         in_tokens = [ ("One", ["Two",]), ("Three", ["Four",]) ]
-        #self.assertEqual(parse.parse(in_str), in_tokens)
+        self.assertEqual(parse.parse(in_str), in_tokens)
 
     def testParseComplex(self):
         in_str = """Declare "squish" "uniform float"
