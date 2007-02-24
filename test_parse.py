@@ -8,7 +8,7 @@ class TestParse(unittest.TestCase):
         in_tokens = [ ("One", None), ("Two", None), ("Three", None) ]
         self.assertEqual(parse.parse(in_str), in_tokens)
 
-    def testParseNames(self):
+    def testParseNames_Space(self):
         in_str = " One   Two  Three "
         in_tokens = [ ("One", None), ("Two", None), ("Three", None) ]
         self.assertEqual(parse.parse(in_str), in_tokens)
