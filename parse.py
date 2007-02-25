@@ -27,6 +27,18 @@ class Whitespace(object):
                 break
         return pos, ""
 
+class Comment(object):
+    delimiter = string.whitespace
+    def detect(self, input, pos):
+        return input[pos] == '#'
+    def tokenize(self, input, pos):
+        start = pos
+        while input[pos] != '\n':
+            pos += 1
+            if pos >= len(input):
+                break
+        return pos, ""
+
 class String(object):
     def detect(self, input, pos):
         return input[pos] == '"'
@@ -41,28 +53,45 @@ class String(object):
                 break
         return pos+1, input[start:pos]
 
+class Array(object):
+    def detect(self, input, pos):
+        return input[pos] in '[]'
+    def tokenize(self, input, pos):
+        return pos+1, input[pos]
+
 def parse(input):
     tokens = []
     w = Whitespace()
     n = Name()
     s = String()
-    name = None
+    a = Array()
+    c = Comment()
+    line = []
     pos = 0
     while True:
         if pos >= len(input):
             break
         if w.detect(input, pos):
             pos, dummy = w.tokenize(input, pos)
+        if c.detect(input, pos):
+            pos, dummy = c.tokenize(input, pos)
         elif s.detect(input, pos):
             pos, value = s.tokenize(input, pos)
-            tokens.append( (name, [value,]) )
-            name = None
+            line.append(value)
+        elif a.detect(input, pos):
+            pos, value = a.tokenize(input, pos)
+            line.append(value)
         elif n.detect(input, pos):
-            if name != None:
-                tokens.append( (name, None) )
             pos, name = n.tokenize(input, pos)
+            try:
+                value = float(name)
+                line.append(value)
+            except:
+                if len(line) != 0:
+                    tokens.append(line)
+                line = [name]
         else:
             break
-    if name != None:
-        tokens.append( (name, None) )
+    if len(line) != 0:
+        tokens.append(line)
     return tokens
