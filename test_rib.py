@@ -14,6 +14,14 @@ class TestRIB(unittest.TestCase):
         tokens = parse.parse(hin.getvalue())
         self.assertEqual([["WorldBegin"]], tokens)
 
+    def testParamters(self):
+        hin = cStringIO.StringIO()
+        hout = rib.RIB(hin)
+        hout.output("Option", "points", [1., 2., 3.])
+        hout.close()
+        tokens = parse.parse(hin.getvalue())
+        self.assertEqual([["Option", "points", "[", 1., 2., 3., "]"]], tokens)
+
 
 class TestFormatter(unittest.TestCase):
 

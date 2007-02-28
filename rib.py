@@ -1,13 +1,32 @@
 class RIB(object):
 
     def __init__(self, hout):
-        self.hout = hout
+        self.hout = Formatter(hout)
 
-    def output(self, token):
-        pass
+    def output(self, name, *tokens):
+        self.hout.output(name)
+        for t in tokens:
+            self._recurse_output(t)
+        self.hout.newline()
+
+    def _recurse_output(self, token):
+        if isinstance(token, str):
+            self.hout.split()
+            self.hout.output('"'+token+'"')
+        else:
+            try:
+                first = True
+                for i in token:
+                    if first:
+                        self.hout.output('[')
+                        first = False
+                    self._recurse_output(i)
+                self.hout.output(']')
+            except:
+                self.hout.output(str(token))
 
     def close(self):
-        print >> self.hout, "WorldBegin"
+        self.hout.close()
 
 
 class Formatter(object):
