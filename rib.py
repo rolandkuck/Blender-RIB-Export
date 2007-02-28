@@ -78,6 +78,7 @@ class Formatter(object):
             print >> self.hout
             self._split_level = 1
             self._line = next_line
+            self._split_pos = -1
 
     def split(self):
         self._split_pos = len(self._line)
