@@ -22,6 +22,28 @@ class TestRIB(unittest.TestCase):
         tokens = parse.parse(hin.getvalue())
         self.assertEqual([["Option", "points", "[", 1., 2., 3., "]"]], tokens)
 
+    def testHierarchy(self):
+        hin = cStringIO.StringIO()
+        hout = rib.RIB(hin)
+        hout.output("WorldBegin")
+        hout.output("TransformBegin")
+        hout.output("Color")
+        hout.output("Color")
+        hout.output("TransformEnd")
+        hout.output("TransformBegin")
+        hout.output("TransformEnd")
+        hout.output("WorldEnd")
+        hout.close()
+        self.assertEqual("WorldBegin\n  TransformBegin\n    Color\n    Color\n  TransformEnd\n  TransformBegin\n  TransformEnd\nWorldEnd", hin.getvalue())
+
+    def testRiMethods(self):
+        hin = cStringIO.StringIO()
+        hout = rib.RIB(hin)
+        hout.RiWorldBegin()
+        hout.RiOption("points", [1., 2., 3.])
+        hout.close()
+        tokens = parse.parse(hin.getvalue())
+        self.assertEqual([["WorldBegin"], ["Option", "points", "[", 1., 2., 3., "]"]], tokens)
 
 class TestFormatter(unittest.TestCase):
 
