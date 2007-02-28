@@ -44,6 +44,7 @@ class RIB(object):
                         first = False
                     self._recurse_output(i)
                 self.hout.output(']')
+                self.hout.split()
             except:
                 self.hout.output(str(token))
 
