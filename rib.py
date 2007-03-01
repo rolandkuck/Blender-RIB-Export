@@ -54,6 +54,61 @@ class RIB(object):
         self.hout.close()
 
 
+class MotionRIB(RIB):
+
+    def __init__(self, hout, timescale, shutter_open, shutter_close):
+        super(MotionRIB, self).__init__(hout)
+        self.timescale = timescale
+        self.shutter_open = shutter_open
+        self.shutter_close = shutter_close
+        self.motion_interval = map(lambda x: x/(self.timescale-1.), range(0,self.timescale))
+        self.frame_count = 0
+        self.frame_mod = 0
+        self.frame_list = []
+        self.in_frame = False
+
+    def output(self, name, *tokens):
+        if name == "FrameBegin":
+            self.frame_mod = tokens[0] % self.timescale
+            self.frame_begin()
+        elif name == "FrameEnd":
+            self.frame_end()
+        else:
+            if self.in_frame:
+                self.frame_list[self.frame_mod].append((name, tokens))
+            else:
+                super(MotionRIB, self).output(name, *tokens)
+
+    def frame_begin(self):
+        self.in_frame = True
+        self.frame_list.append([])
+
+    def frame_end(self):
+        self.in_frame = False
+        if (self.frame_mod+1) != self.timescale:
+            return
+        super(MotionRIB, self).output("Shutter", self.shutter_open+self.frame_count, self.shutter_close + self.frame_count)
+        motion_interval = map(lambda x: x+self.frame_count, self.motion_interval)
+        super(MotionRIB, self).output("FrameBegin", self.frame_count)
+        for i in xrange(0, len(self.frame_list[0])):
+            for j in xrange(1, self.timescale):
+                if self.frame_list[j][i] != self.frame_list[0][i]:
+                    break
+            else:
+                name, tokens = self.frame_list[0][i] 
+                super(MotionRIB, self).output(name, *tokens)
+                break
+            super(MotionRIB, self).output("MotionBegin", motion_interval)
+            for j in xrange(0, self.timescale):
+                name, tokens = self.frame_list[j][i] 
+                super(MotionRIB, self).output(name, *tokens)
+            super(MotionRIB, self).output("MotionEnd")
+        super(MotionRIB, self).output("FrameEnd")
+        self.frame_count += 1
+        self.frame_list = []
+
+
+
 class Formatter(object):
 
     def __init__(self, hout):

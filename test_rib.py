@@ -45,6 +45,27 @@ class TestRIB(unittest.TestCase):
         tokens = parse.parse(hin.getvalue())
         self.assertEqual([["WorldBegin"], ["Option", "points", "[", 1., 2., 3., "]"]], tokens)
 
+    def testMotion(self):
+        hin = cStringIO.StringIO()
+        hout = rib.MotionRIB(hin, 3, 0., 1.)
+        for i in xrange(0, 3):
+            hout.RiFrameBegin(i)
+            hout.RiTranslate(i, 0, 0)
+            hout.RiColor([1., 0., 0.])
+            hout.RiFrameEnd()
+        hout.close()
+        tokens = parse.parse(hin.getvalue())
+        expected = [ ["Shutter", 0., 1.],
+                     ["FrameBegin", 0.], 
+                     ["MotionBegin", '[', 0., 0.5, 1., ']' ],
+                     ["Translate", 0., 0., 0.],
+                     ["Translate", 1., 0., 0.],
+                     ["Translate", 2., 0., 0.],
+                     ["MotionEnd"],
+                     ["Color", '[', 1., 0., 0., ']' ],
+                     ["FrameEnd"] ]
+        self.assertEqual(expected, tokens)
+
 class TestFormatter(unittest.TestCase):
 
     def setUp(self):
