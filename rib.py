@@ -69,7 +69,6 @@ class MotionRIB(RIB):
 
     def output(self, name, *tokens):
         if name == "FrameBegin":
-            self.frame_mod = tokens[0] % self.timescale
             self.frame_begin()
         elif name == "FrameEnd":
             self.frame_end()
@@ -86,6 +85,7 @@ class MotionRIB(RIB):
     def frame_end(self):
         self.in_frame = False
         if (self.frame_mod+1) != self.timescale:
+            self.frame_mod += 1
             return
         super(MotionRIB, self).output("Shutter", self.shutter_open+self.frame_count, self.shutter_close + self.frame_count)
         motion_interval = map(lambda x: x+self.frame_count, self.motion_interval)
@@ -105,7 +105,8 @@ class MotionRIB(RIB):
             super(MotionRIB, self).output("MotionEnd")
         super(MotionRIB, self).output("FrameEnd")
         self.frame_count += 1
-        self.frame_list = []
+        self.frame_mod = 1
+        self.frame_list = self.frame_list[-1:]
 
 
 
