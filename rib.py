@@ -1,3 +1,4 @@
+
 class RIB(object):
 
     cmd_indent = [ "WorldBegin", "TransformBegin" ]
@@ -17,6 +18,7 @@ class RIB(object):
     def __getattr__(self, name):
         if name[0:2] == "Ri":
             return self._curried_output(self, name[2:])
+        raise AttributeError(name)
 
     def output(self, name, *tokens):
         if name in self.cmd_deindent:
