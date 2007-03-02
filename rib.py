@@ -1,8 +1,10 @@
 
 class RIB(object):
 
-    cmd_indent = [ "WorldBegin", "TransformBegin" ]
-    cmd_deindent = [ "WorldEnd", "TransformEnd" ]
+    cmd_indent = [ "FrameBegin", "WorldBegin",
+                   "AttributeBegin", "TransformBegin" ]
+    cmd_deindent = [ "FrameEnd", "WorldEnd",
+                     "AttributeEnd", "TransformEnd" ]
 
     def __init__(self, hout):
         self.hout = Formatter(hout)
