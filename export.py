@@ -1,36 +1,39 @@
 import Blender
 import math
+import rib
 
 
-def matrix_to_string(m):
-    retval = '[ '
+def matrix_to_list(m):
+    retval = []
     for i in xrange(0, 4):
         for j in xrange(0, 4):
-            retval += str(m[i][j]) + ' '
-    retval += ']'
+            retval.append(m[i][j])
     return retval
 
 
 def export_mesh(hout, ob, props):
     subdiv = props.get('SubDiv', False)
     me = ob.getData()
+    tokens = []
     if subdiv:
-        print >> hout, 'SubdivisionMesh "catmull-clark" [',
+        cmd = "SubdivisionMesh"
+        tokens.append("catmull-clark")
     else:
-        print >> hout, 'PointsPolygons [',
-    for f in me.faces:
-        print >> hout, len(f.v),
-    print >> hout, '] [',
+        cmd = "PointsPolygons"
+    tokens.append(map(lambda f: len(f.v), me.faces))
+    faces = []
     for f in me.faces:
         for v in f.v:
-            print >> hout, v.index,
-    print >> hout, ']',
+            faces.append(v.index)
+    tokens.append(faces)
     if subdiv:
-        print >> hout, ' [] [] [] []',
-    print >> hout, ' "P" [',
+        tokens += [ [], [], [], [] ]
+    tokens.append("P")
+    points = []
     for v in me.verts:
-        print >> hout, v.co[0], v.co[1], v.co[2],
-    print >> hout, ']'
+        points += [ v.co[0], v.co[1], v.co[2] ]
+    tokens.append(points)
+    hout.output(cmd, *tokens)
         
 
 def export_camera(hout, camera):
@@ -38,14 +41,14 @@ def export_camera(hout, camera):
         c = camera.getData()
         if c.getType() == 0:
             fov = 2.*math.atan(16./c.getLens())*180./math.pi
-            print >> hout, 'Projection "perspective" "fov" ['+str(fov)+']'
+            hout.output("Projection", "perspective",  "fov",  [fov,])
         else:
             scale = 1./c.getScale()
-            print >> hout, 'Scale ' + str(scale) + ' ' + str(scale) + ' 1.'
-            print >> hout, 'Projection "orthographic"'
-        print >> hout, 'Clipping', c.getClipStart(), c.getClipEnd()
-    print >> hout, 'Scale 1. 1. -1.'
-    print >> hout, 'ConcatTransform', matrix_to_string(camera.matrixWorld.invert())
+            hout.output("Scale", scale, scale, 1.)
+            hout.output("Projection", "orthographic")
+        hout.output("Clipping", c.getClipStart(), c.getClipEnd())
+    hout.output("Scale", 1., 1., -1.)
+    hout.output("ConcatTransform", matrix_to_list(camera.matrixWorld.invert()))
 
 
 # Trivial node class
@@ -82,36 +85,36 @@ def recurse_transform(hout, nodelist):
         for p in props_list:
             props[p.getName()] = p.getData() 
         
-        print >> hout, 'CoordinateSystem "'+str(n.ob.name)+'"'
-        print >> hout, 'AttributeBegin'
-        print >> hout, 'Transform', matrix_to_string(n.ob.getMatrix())
+        hout.output("CoordinateSystem", str(n.ob.name))
+        hout.output("AttributeBegin")
+        hout.output("Transform", matrix_to_list(n.ob.getMatrix()))
 
         surface = props.get('Surface', None)
         if (surface != None) and (len(surface) != 0):
-            print >> hout, 'Surface "'+str(surface)+'"'
+            hout.output("Surface", str(surface))
 
         if type(n.ob.getData()) == Blender.Types.NMeshType:
             export_mesh(hout, n.ob, props)
         recurse_transform(hout, n.children)
         
-        print >> hout, 'AttributeEnd'
+        hout.output("AttributeEnd")
 
 
 # Output header
-hout = open('output.rib', 'w')
+hout = rib.RIB(open('output.rib', 'w'))
 context = scene.getRenderingContext()
 size_x = context.imageSizeX()
 size_y = context.imageSizeY()
 par = float(context.aspectRatioX()) / float(context.aspectRatioY())
 far = size_x * par / size_y
-print >> hout, 'Format', size_x, size_y, par
+hout.output("Format", size_x, size_y, par)
 if (far > 1.):
-    print >> hout, 'ScreenWindow -1 1', -1./far, 1./far
+    hout.output("ScreenWindow", -1., 1., -1./far, 1./far)
 else:
-    print >> hout, 'ScreenWindow', -far, far, '-1 1'
-print >> hout, 'FrameBegin 0'
+    hout.output("ScreenWindow", -far, far, -1., 1.)
+hout.output("FrameBegin", 0)
 export_camera(hout, camera)
-print >> hout, 'WorldBegin'
+hout.output("WorldBegin")
 recurse_transform(hout, root)		
-print >> hout, 'WorldEnd'
-print >> hout, 'FrameEnd'
+hout.output("WorldEnd")
+hout.output("FrameEnd")
