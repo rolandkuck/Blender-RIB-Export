@@ -47,6 +47,8 @@ class RIB(object):
                         self.hout.output('[')
                         first = False
                     self._recurse_output(i)
+                if first:
+                    self.hout.output('[')
                 self.hout.output(']')
                 self.hout.split()
             except:
