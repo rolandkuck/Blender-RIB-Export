@@ -1,6 +1,7 @@
 import Blender
 import math
 import rib
+import params
 
 def matrix_to_list(m):
     retval = []
@@ -24,6 +25,7 @@ def export_camera(hout, camera):
     hout.output("ConcatTransform", matrix_to_list(camera.matrixWorld.invert()))
 
 
+
 class Empty(object):
     def __init__(self, ob):
         super(Empty, self).__init__()
@@ -43,6 +45,20 @@ class Empty(object):
         hout.output("AttributeBegin")
         hout.output("Transform", matrix_to_list(self.ob.getMatrix()))
         hout.output("CoordinateSystem", str(self.ob.name))
+        try:
+            def Float(f):
+                return f
+            mat = self.ob.getMaterials()[0]
+            ribdata = mat.properties['RIB']
+            surface_shader = ribdata['Surface']
+            surface_params = ribdata['SurfaceParams']
+            param_list = []
+            for prop in surface_params:
+                param = eval(str(surface_params[prop]), {}, vars(params))
+                param_list += param.inline(prop)
+            hout.output("Surface", surface_shader, *param_list)
+        except:
+            pass
 
     def transform_end(self, hout):
         hout.output("AttributeEnd")
