@@ -2,39 +2,12 @@ import Blender
 import math
 import rib
 
-
 def matrix_to_list(m):
     retval = []
     for i in xrange(0, 4):
         for j in xrange(0, 4):
             retval.append(m[i][j])
     return retval
-
-
-def export_mesh(hout, ob, props):
-    subdiv = props.get('SubDiv', False)
-    me = ob.getData()
-    tokens = []
-    if subdiv:
-        cmd = "SubdivisionMesh"
-        tokens.append("catmull-clark")
-    else:
-        cmd = "PointsPolygons"
-    tokens.append(map(lambda f: len(f.v), me.faces))
-    faces = []
-    for f in me.faces:
-        for v in f.v:
-            faces.append(v.index)
-    tokens.append(faces)
-    if subdiv:
-        tokens += [ [], [], [], [] ]
-    tokens.append("P")
-    points = []
-    for v in me.verts:
-        points += [ v.co[0], v.co[1], v.co[2] ]
-    tokens.append(points)
-    hout.output(cmd, *tokens)
-        
 
 def export_camera(hout, camera):
     if type(camera.getData()) == Blender.Types.CameraType:
@@ -51,54 +24,110 @@ def export_camera(hout, camera):
     hout.output("ConcatTransform", matrix_to_list(camera.matrixWorld.invert()))
 
 
-# Trivial node class
-class node(object):
+class Empty(object):
     def __init__(self, ob):
-        super(node,self).__init__()
+        super(Empty, self).__init__()
         self.ob = ob
-        self.children = []
 
-# Get current scene and camera
-scene = Blender.Scene.getCurrent()
-camera = scene.getCurrentCamera()
+    def initialize(self):
+        pass
 
-# Iterate over all objects in scene and build hierarchy
-#  As blender object are not hashable type we use their names
-#  instead (which are guaranteed to be unique)
-root = []
-dict = {}
-for ob in scene.getChildren():
-    n = node(ob)
-    dict[ob.name] = n
-for n in dict.itervalues():
-    parent = n.ob.getParent()
-    if (parent == None):
-        root.append(n)
-    else:
-        dict[parent.name].children.append(n)
+    def output(self, hout):
+        self.transform_begin(hout)
+        self.transform_end(hout)
 
-# Recurse and print meshes
-def recurse_transform(hout, nodelist):
-    for n in nodelist:
-        props = {}
-        props_list = n.ob.getAllProperties()
-        for p in props_list:
-            props[p.getName()] = p.getData() 
-        
-        hout.output("CoordinateSystem", str(n.ob.name))
+    def cleanup(self):
+        pass
+
+    def transform_begin(self, hout):
         hout.output("AttributeBegin")
-        hout.output("Transform", matrix_to_list(n.ob.getMatrix()))
+        hout.output("Transform", matrix_to_list(self.ob.getMatrix()))
+        hout.output("CoordinateSystem", str(self.ob.name))
 
-        surface = props.get('Surface', None)
-        if (surface != None) and (len(surface) != 0):
-            hout.output("Surface", str(surface))
-
-        if type(n.ob.getData()) == Blender.Types.NMeshType:
-            export_mesh(hout, n.ob, props)
-        recurse_transform(hout, n.children)
-        
+    def transform_end(self, hout):
         hout.output("AttributeEnd")
 
+
+class Mesh(Empty):
+
+    subdiv_switch = Blender.Modifier.Settings.RENDER
+    subdiv_switch = Blender.Modifier.Settings.REALTIME  # BUG in Blender
+
+    def __init__(self, ob):
+        super(Mesh, self).__init__(ob)
+        self.is_subdiv = False
+
+    def initialize(self):
+        try:
+            self.lastmod = self.ob.modifiers[len(self.ob.modifiers)-1]
+            if self.lastmod.type == Blender.Modifier.Types.SUBSURF \
+             and self.lastmod[Blender.Modifier.Settings.TYPES] == 0 \
+             and self.lastmod[self.subdiv_switch]:
+                self.is_subdiv = True
+                self.lastmod[self.subdiv_switch] = 0
+        except:
+            pass
+
+    def output(self, hout):
+        self.transform_begin(hout)
+        me = Blender.Mesh.New()
+        #syime.getFromObject(self.ob, 0, 1)  # BUG in Blender
+        me.getFromObject(self.ob, 0)
+        tokens = []
+        if self.is_subdiv:
+            cmd = "SubdivisionMesh"
+            tokens.append("catmull-clark")
+        else:
+            cmd = "PointsPolygons"
+        tokens.append(map(lambda f: len(f.v), me.faces))
+        faces = []
+        for f in me.faces:
+            for v in f.v:
+                faces.append(v.index)
+        tokens.append(faces)
+        if self.is_subdiv:
+            tokens += [ [], [], [], [] ]
+        tokens.append("P")
+        points = []
+        for v in me.verts:
+            points += [ v.co[0], v.co[1], v.co[2] ]
+        tokens.append(points)
+        hout.output(cmd, *tokens)
+        self.transform_end(hout)
+
+    def cleanup(self):
+        if self.is_subdiv:
+            self.lastmod[self.subdiv_switch] = 1
+
+
+class Light(Empty):
+    def __init__(self, ob):
+        super(Light, self).__init__(ob)
+
+def node_factory(ob, lights, renderables):
+    ob_type = ob.getType()
+    if ob_type == 'Mesh':
+        renderables.append(Mesh(ob))
+    elif ob_type == 'Lamp':
+        lights.append(Light(ob))
+    else:
+        renderables.append(Empty(ob))
+
+
+# Retrieve current scene
+scene = Blender.Scene.GetCurrent()
+
+# Create list of lights and renderable objects
+lights = []
+renderables = []
+for ob in scene.getChildren():
+    node_factory(ob, lights, renderables)
+
+# Change blender state to faciliate export
+for node in lights:
+    node.initialize()
+for node in renderables:
+    node.initialize()
 
 # Output header
 hout = rib.RIB(open('output.rib', 'w'))
@@ -112,9 +141,26 @@ if (far > 1.):
     hout.output("ScreenWindow", -1., 1., -1./far, 1./far)
 else:
     hout.output("ScreenWindow", -far, far, -1., 1.)
+
 hout.output("FrameBegin", 0)
+camera = scene.getCurrentCamera()
 export_camera(hout, camera)
+
 hout.output("WorldBegin")
-recurse_transform(hout, root)		
+
+# Now output nodes
+for node in lights:
+    node.output(hout)
+for node in renderables:
+    node.output(hout)
+
 hout.output("WorldEnd")
 hout.output("FrameEnd")
+hout.close()
+
+# Change blender state to faciliate export
+for node in lights:
+    node.cleanup()
+for node in renderables:
+    node.cleanup()
+
