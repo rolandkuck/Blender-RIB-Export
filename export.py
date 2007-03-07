@@ -24,6 +24,12 @@ def export_camera(hout, camera):
     hout.output("Scale", 1., 1., -1.)
     hout.output("ConcatTransform", matrix_to_list(camera.matrixWorld.invert()))
 
+def shader_params(properties, object):
+    param_list = []
+    for prop in properties:
+        param = eval(str(properties[prop]), {}, vars(params)) #, {'self': object})
+        param_list += param.inline(prop)
+    return param_list
 
 
 class Empty(object):
@@ -45,20 +51,6 @@ class Empty(object):
         hout.output("AttributeBegin")
         hout.output("Transform", matrix_to_list(self.ob.getMatrix()))
         hout.output("CoordinateSystem", str(self.ob.name))
-        try:
-            def Float(f):
-                return f
-            mat = self.ob.getMaterials()[0]
-            ribdata = mat.properties['RIB']
-            surface_shader = ribdata['Surface']
-            surface_params = ribdata['SurfaceParams']
-            param_list = []
-            for prop in surface_params:
-                param = eval(str(surface_params[prop]), {}, vars(params))
-                param_list += param.inline(prop)
-            hout.output("Surface", surface_shader, *param_list)
-        except:
-            pass
 
     def transform_end(self, hout):
         hout.output("AttributeEnd")
@@ -84,8 +76,18 @@ class Mesh(Empty):
         except:
             pass
 
-    def output(self, hout):
-        self.transform_begin(hout)
+    def output_surface_shader(self, hout):
+        try:
+            mat = self.ob.getMaterials()[0]
+            ribdata = mat.properties['RIB']
+            surface_shader = ribdata['Surface']
+            surface_params = ribdata['SurfaceParams']
+            param_list = shader_params(surface_params, mat)
+            hout.output("Surface", surface_shader, *param_list)
+        except:
+            pass
+
+    def output_mesh(self, hout):
         me = Blender.Mesh.New()
         #syime.getFromObject(self.ob, 0, 1)  # BUG in Blender
         me.getFromObject(self.ob, 0)
@@ -109,6 +111,11 @@ class Mesh(Empty):
             points += [ v.co[0], v.co[1], v.co[2] ]
         tokens.append(points)
         hout.output(cmd, *tokens)
+
+    def output(self, hout):
+        self.transform_begin(hout)
+        self.output_surface_shader(hout)
+        self.output_mesh(hout)
         self.transform_end(hout)
 
     def cleanup(self):
@@ -117,8 +124,30 @@ class Mesh(Empty):
 
 
 class Light(Empty):
+
+    light_count = 0
+
     def __init__(self, ob):
         super(Light, self).__init__(ob)
+        self.light_count += 1
+        self.light = self.light_count
+
+    def output_lightsource_shader(self, hout):
+        try:
+            ribdata = self.ob.properties['RIB']
+            lightsource_shader = ribdata['LightSource']
+            lightsource_params = ribdata['LightSourceParams']
+            param_list = shader_params(lightsource_params, self.ob)
+            hout.output("LightSource", lightsource_shader, self.light, *param_list)
+        except:
+            pass
+
+    def output(self, hout):
+        self.transform_begin(hout)
+        self.output_lightsource_shader(hout)
+        self.transform_end(hout)
+        hout.output("Illuminate", self.light, 1)
+
 
 def node_factory(ob, lights, renderables):
     ob_type = ob.getType()
