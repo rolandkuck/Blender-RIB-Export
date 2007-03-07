@@ -146,7 +146,6 @@ class Light(Empty):
         self.transform_begin(hout)
         self.output_lightsource_shader(hout)
         self.transform_end(hout)
-        hout.output("Illuminate", self.light, 1)
 
 
 def node_factory(ob, lights, renderables):
@@ -197,7 +196,12 @@ hout.output("WorldBegin")
 for node in lights:
     node.output(hout)
 for node in renderables:
+    hout.output("AttributeBegin")
+    for l in lights:
+        if (node.ob.Layers & l.ob.Layers) != 0:
+            hout.output("Illuminate", l.light, 1)
     node.output(hout)
+    hout.output("AttributeEnd")
 
 hout.output("WorldEnd")
 hout.output("FrameEnd")
