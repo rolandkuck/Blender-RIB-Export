@@ -68,9 +68,9 @@ class Mesh(Empty):
     def initialize(self):
         try:
             self.lastmod = self.ob.modifiers[len(self.ob.modifiers)-1]
-            if self.lastmod.type == Blender.Modifier.Types.SUBSURF \
-             and self.lastmod[Blender.Modifier.Settings.TYPES] == 0 \
-             and self.lastmod[self.subdiv_switch]:
+            if (self.lastmod.type == Blender.Modifier.Types.SUBSURF
+             and self.lastmod[Blender.Modifier.Settings.TYPES] == 0
+             and self.lastmod[self.subdiv_switch]):
                 self.is_subdiv = True
                 self.lastmod[self.subdiv_switch] = 0
         except:
