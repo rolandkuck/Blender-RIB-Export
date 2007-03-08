@@ -168,10 +168,9 @@ for ob in scene.getChildren():
     node_factory(ob, lights, renderables)
 
 # Change blender state to faciliate export
-for node in lights:
-    node.initialize()
-for node in renderables:
-    node.initialize()
+for nodelist in lights, renderables:
+    for node in nodelist:
+        node.initialize()
 
 # Output header
 hout = rib.RIB(open('output.rib', 'w'))
@@ -208,8 +207,7 @@ hout.output("FrameEnd")
 hout.close()
 
 # Change blender state to faciliate export
-for node in lights:
-    node.cleanup()
-for node in renderables:
-    node.cleanup()
+for nodelist in lights, renderables:
+    for node in nodelist:
+        node.cleanup()
 
