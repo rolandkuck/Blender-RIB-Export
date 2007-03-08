@@ -27,7 +27,7 @@ def export_camera(hout, camera):
 def shader_params(properties, object):
     param_list = []
     for prop in properties:
-        param = eval(str(properties[prop]), {}, vars(params)) #, {'self': object})
+        param = eval(str(properties[prop]), vars(params), {'self': object})
         param_list += param.inline(prop)
     return param_list
 
