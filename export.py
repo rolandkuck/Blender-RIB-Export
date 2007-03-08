@@ -133,10 +133,11 @@ class Light(Empty):
 
     light_count = 0
 
-    def __init__(self, ob):
+    def __init__(self, ob, isglobal=False):
         super(Light, self).__init__(ob)
         self.light_count += 1
         self.light = self.light_count
+        self.isglobal = isglobal
 
     def output_lightsource_shader(self, hout):
         try:
@@ -148,18 +149,26 @@ class Light(Empty):
         except:
             pass
 
+    def output_illuminate(self):
+        hout.output("Illuminate", self.light, 1)
+
     def output(self, hout):
         self.transform_begin(hout)
         self.output_lightsource_shader(hout)
         self.transform_end(hout)
+        if self.isglobal:
+            self.output_illuminate()
 
 
-def node_factory(ob, lights, renderables):
+def node_factory(ob, global_lights, local_lights, renderables):
     ob_type = ob.getType()
     if ob_type == 'Mesh':
         renderables.append(Mesh(ob))
     elif ob_type == 'Lamp':
-        lights.append(Light(ob))
+        if (ob.data.mode & Blender.Lamp.Modes["Layer"]) == 0:
+            global_lights.append(Light(ob, True))
+        else:
+            local_lights.append(Light(ob))
     else:
         renderables.append(Empty(ob))
 
@@ -168,13 +177,15 @@ def node_factory(ob, lights, renderables):
 scene = Blender.Scene.GetCurrent()
 
 # Create list of lights and renderable objects
-lights = []
+global_lights = []
+local_lights = []
 renderables = []
 for ob in scene.getChildren():
-    node_factory(ob, lights, renderables)
+    node_factory(ob, global_lights, local_lights, renderables)
+nodes = [ global_lights, local_lights, renderables ]
 
 # Change blender state to faciliate export
-for nodelist in lights, renderables:
+for nodelist in nodes:
     for node in nodelist:
         node.initialize()
 
@@ -198,11 +209,12 @@ export_camera(hout, camera)
 hout.output("WorldBegin")
 
 # Now output nodes
-for node in lights:
-    node.output(hout)
+for nodelist in global_lights, local_lights:
+    for node in nodelist:
+        node.output(hout)
 for node in renderables:
     hout.output("AttributeBegin")
-    for l in lights:
+    for l in local_lights:
         if (node.ob.Layers & l.ob.Layers) != 0:
             hout.output("Illuminate", l.light, 1)
     node.output(hout)
@@ -213,7 +225,7 @@ hout.output("FrameEnd")
 hout.close()
 
 # Change blender state to faciliate export
-for nodelist in lights, renderables:
+for nodelist in nodes:
     for node in nodelist:
         node.cleanup()
 
