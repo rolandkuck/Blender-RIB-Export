@@ -33,6 +33,9 @@ def shader_params(properties, object):
 
 
 class Empty(object):
+
+    property_group = 'RIB'
+
     def __init__(self, ob):
         super(Empty, self).__init__()
         self.ob = ob
@@ -79,7 +82,7 @@ class Mesh(Empty):
     def output_surface_shader(self, hout):
         try:
             mat = self.ob.getMaterials()[0]
-            ribdata = mat.properties['RIB']
+            ribdata = mat.properties[self.property_group]
             surface_shader = ribdata['Surface']
             surface_params = ribdata['SurfaceParams']
             param_list = shader_params(surface_params, mat)
@@ -134,7 +137,7 @@ class Light(Empty):
 
     def output_lightsource_shader(self, hout):
         try:
-            ribdata = self.ob.properties['RIB']
+            ribdata = self.ob.properties[self.property_group]
             lightsource_shader = ribdata['LightSource']
             lightsource_params = ribdata['LightSourceParams']
             param_list = shader_params(lightsource_params, self.ob)
