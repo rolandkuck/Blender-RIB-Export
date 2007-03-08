@@ -81,7 +81,10 @@ class Mesh(Empty):
 
     def output_surface_shader(self, hout):
         try:
-            mat = self.ob.getMaterials()[0]
+            if (self.ob.colbits & 1) == 0:
+                mat = self.ob.data.materials[0]
+            else:
+                mat = self.ob.getMaterials()[0]
             ribdata = mat.properties[self.property_group]
             surface_shader = ribdata['Surface']
             surface_params = ribdata['SurfaceParams']
@@ -92,7 +95,7 @@ class Mesh(Empty):
 
     def output_mesh(self, hout):
         me = Blender.Mesh.New()
-        #syime.getFromObject(self.ob, 0, 1)  # BUG in Blender
+        #me.getFromObject(self.ob, 0, 1)  # BUG in Blender
         me.getFromObject(self.ob, 0)
         tokens = []
         if self.is_subdiv:
