@@ -62,7 +62,6 @@ class Empty(object):
 class Mesh(Empty):
 
     subdiv_switch = Blender.Modifier.Settings.RENDER
-    subdiv_switch = Blender.Modifier.Settings.REALTIME  # BUG in Blender
 
     def __init__(self, ob):
         super(Mesh, self).__init__(ob)
@@ -95,8 +94,7 @@ class Mesh(Empty):
 
     def output_mesh(self, hout):
         me = Blender.Mesh.New()
-        #me.getFromObject(self.ob, 0, 1)  # BUG in Blender
-        me.getFromObject(self.ob, 0)
+        me.getFromObject(self.ob, 0, 1)
         tokens = []
         if self.is_subdiv:
             cmd = "SubdivisionMesh"
