@@ -178,7 +178,7 @@ scene = Blender.Scene.GetCurrent()
 global_lights = []
 local_lights = []
 renderables = []
-for ob in scene.getChildren():
+for ob in scene.objects:
     node_factory(ob, global_lights, local_lights, renderables)
 nodes = [ global_lights, local_lights, renderables ]
 
@@ -201,7 +201,7 @@ else:
     hout.output("ScreenWindow", -far, far, -1., 1.)
 
 hout.output("FrameBegin", 0)
-camera = scene.getCurrentCamera()
+camera = scene.objects.camera
 export_camera(hout, camera)
 
 hout.output("WorldBegin")
