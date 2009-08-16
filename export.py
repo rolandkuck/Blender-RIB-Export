@@ -199,7 +199,7 @@ for ob in scene.objects:
     node_factory(ob, global_lights, local_lights, renderables)
 nodes = [ global_lights, local_lights, renderables ]
 
-# Change blender state to faciliate export
+# Change blender state to facilitate export
 for nodelist in nodes:
     for node in nodelist:
         node.initialize()
@@ -239,7 +239,7 @@ hout.output("WorldEnd")
 hout.output("FrameEnd")
 hout.close()
 
-# Change blender state to faciliate export
+# Change blender state to facilitate export
 for nodelist in nodes:
     for node in nodelist:
         node.cleanup()
