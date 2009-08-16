@@ -1,0 +1,8 @@
+blender-rib-export allows you to export your Blender scene to the RIB file 
+format. This can then be used to render the image via a Renderman-compatible 
+renderer.
+
+There currently does not exist a real GUI for the exporter. To export your 
+scene, copy the 'rib.py' and 'params.py' files into your blender script 
+directory, open 'export.py' in the Blender text editor and press Alt-P to run 
+the script.  The output file is at the moment always called 'output.rib'.
