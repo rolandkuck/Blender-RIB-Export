@@ -17,8 +17,8 @@
 
 import unittest
 
-import test_parse
-import test_rib
+from tests import test_parse
+from tests import test_rib
 
 if __name__ == '__main__':
     suite = unittest.TestSuite()

@@ -19,7 +19,7 @@ import unittest
 import cStringIO
 import parse
 
-import rib
+from ribexport import rib
 
 class TestRIB(unittest.TestCase):
 

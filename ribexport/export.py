@@ -164,7 +164,7 @@ class Light(Empty):
         except:
             pass
 
-    def output_illuminate(self):
+    def output_illuminate(self, hout):
         hout.output("Illuminate", self.light, 1)
 
     def output(self, hout):
@@ -172,7 +172,7 @@ class Light(Empty):
         self.output_lightsource_shader(hout)
         self.transform_end(hout)
         if self.isglobal:
-            self.output_illuminate()
+            self.output_illuminate(hout)
 
 
 def node_factory(ob, global_lights, local_lights, renderables):
@@ -188,59 +188,59 @@ def node_factory(ob, global_lights, local_lights, renderables):
         renderables.append(Empty(ob))
 
 
-# Retrieve current scene
-scene = Blender.Scene.GetCurrent()
+def export(filename):
+    # Retrieve current scene
+    scene = Blender.Scene.GetCurrent()
 
-# Create list of lights and renderable objects
-global_lights = []
-local_lights = []
-renderables = []
-for ob in scene.objects:
-    node_factory(ob, global_lights, local_lights, renderables)
-nodes = [ global_lights, local_lights, renderables ]
+    # Create list of lights and renderable objects
+    global_lights = []
+    local_lights = []
+    renderables = []
+    for ob in scene.objects:
+        node_factory(ob, global_lights, local_lights, renderables)
+    nodes = [ global_lights, local_lights, renderables ]
 
-# Change blender state to facilitate export
-for nodelist in nodes:
-    for node in nodelist:
-        node.initialize()
+    # Change blender state to facilitate export
+    for nodelist in nodes:
+        for node in nodelist:
+            node.initialize()
 
-# Output header
-hout = rib.RIB(open('output.rib', 'w'))
-context = scene.getRenderingContext()
-size_x = context.imageSizeX()
-size_y = context.imageSizeY()
-par = float(context.aspectRatioX()) / float(context.aspectRatioY())
-far = size_x * par / size_y
-hout.output("Format", size_x, size_y, par)
-if (far > 1.):
-    hout.output("ScreenWindow", -1., 1., -1./far, 1./far)
-else:
-    hout.output("ScreenWindow", -far, far, -1., 1.)
+    # Output header
+    hout = rib.RIB(open(filename, 'w'))
+    context = scene.getRenderingContext()
+    size_x = context.imageSizeX()
+    size_y = context.imageSizeY()
+    par = float(context.aspectRatioX()) / float(context.aspectRatioY())
+    far = size_x * par / size_y
+    hout.output("Format", size_x, size_y, par)
+    if (far > 1.):
+        hout.output("ScreenWindow", -1., 1., -1./far, 1./far)
+    else:
+        hout.output("ScreenWindow", -far, far, -1., 1.)
 
-hout.output("FrameBegin", 0)
-camera = scene.objects.camera
-export_camera(hout, camera)
+    hout.output("FrameBegin", 0)
+    camera = scene.objects.camera
+    export_camera(hout, camera)
 
-hout.output("WorldBegin")
+    hout.output("WorldBegin")
 
-# Now output nodes
-for nodelist in global_lights, local_lights:
-    for node in nodelist:
+    # Now output nodes
+    for nodelist in global_lights, local_lights:
+        for node in nodelist:
+            node.output(hout)
+    for node in renderables:
+        hout.output("AttributeBegin")
+        for l in local_lights:
+            if (node.ob.Layers & l.ob.Layers) != 0:
+                hout.output("Illuminate", l.light, 1)
         node.output(hout)
-for node in renderables:
-    hout.output("AttributeBegin")
-    for l in local_lights:
-        if (node.ob.Layers & l.ob.Layers) != 0:
-            hout.output("Illuminate", l.light, 1)
-    node.output(hout)
-    hout.output("AttributeEnd")
+        hout.output("AttributeEnd")
 
-hout.output("WorldEnd")
-hout.output("FrameEnd")
-hout.close()
+    hout.output("WorldEnd")
+    hout.output("FrameEnd")
+    hout.close()
 
-# Change blender state to facilitate export
-for nodelist in nodes:
-    for node in nodelist:
-        node.cleanup()
-
+    # Change blender state to facilitate export
+    for nodelist in nodes:
+        for node in nodelist:
+            node.cleanup()
