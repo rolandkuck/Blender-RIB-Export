@@ -148,12 +148,9 @@ class Mesh(Empty):
 
 class Light(Empty):
 
-    light_count = 0
-
-    def __init__(self, ob, isglobal=False):
+    def __init__(self, ob, light_handle, isglobal=False):
         super(Light, self).__init__(ob)
-        self.light_count += 1
-        self.light = self.light_count
+        self.light = light_handle
         self.isglobal = isglobal
 
     def output_lightsource_shader(self, hout):
@@ -182,10 +179,11 @@ def node_factory(ob, global_lights, local_lights, renderables):
     if ob_type == 'Mesh':
         renderables.append(Mesh(ob))
     elif ob_type == 'Lamp':
+        light_handle = len(global_lights)+len(local_lights)+1
         if (ob.data.mode & Blender.Lamp.Modes["Layer"]) == 0:
-            global_lights.append(Light(ob, True))
+            global_lights.append(Light(ob, light_handle, True))
         else:
-            local_lights.append(Light(ob))
+            local_lights.append(Light(ob, light_handle))
     else:
         renderables.append(Empty(ob))
 
