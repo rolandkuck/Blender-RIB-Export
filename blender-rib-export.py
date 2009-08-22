@@ -21,6 +21,7 @@ from Blender import BGL
 from Blender import Window
 
 import ribexport.export
+from ribexport import config
 
 class UI(object):
     "User interface class for export plug-in"
@@ -34,11 +35,20 @@ class UI(object):
         super(UI, self).__init__()
         self._output = ''
 
+    def _get_scene(self):
+        return Blender.Scene.GetCurrent()
+
+    def _get_properties(self):
+        properties = self._get_scene().properties
+        if config.property_group not in properties:
+            properties[config.property_group] = { 'Output': 'output.rib' }
+        return properties[config.property_group]
+
     def _get_output(self):
-        return self._output
+        return self._get_properties()['Output']
 
     def _set_output(self, value):
-        self._output = value
+        self._get_properties()['Output'] = value
 
     def _draw(self):
         BGL.glClear(BGL.GL_COLOR_BUFFER_BIT)
@@ -70,7 +80,8 @@ class UI(object):
         elif evt == self.EVENT_FILECHOOSER:
             Window.FileSelector(self._output_file_callback, "Select output RIB name", self._get_output())
         elif evt == self.EVENT_RENDER:
-            ribexport.export.export(self._get_output())
+            scene = self._get_scene()
+            ribexport.export.export(self._get_output(), scene)
 
     def _output_file_callback(self, filename):
         self._set_output(filename)
