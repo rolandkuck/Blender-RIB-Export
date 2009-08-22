@@ -65,6 +65,11 @@ class _Float3(_Parameter):
         except:
             raise TypeError()
 
+class Point(_Float3):
+    def __init__(self, *args):
+        super(Point, self).__init__(*args)
+        self.type = "point"
+
 class Vector(_Float3):
     def __init__(self, *args):
         super(Vector, self).__init__(*args)
@@ -74,3 +79,8 @@ class Normal(_Float3):
     def __init__(self, *args):
         super(Normal, self).__init__(*args)
         self.type = "normal"
+
+class Color(_Float3):
+    def __init__(self, *args):
+        super(Color, self).__init__(*args)
+        self.type = "color"
