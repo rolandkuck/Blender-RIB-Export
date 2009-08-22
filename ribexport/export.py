@@ -177,36 +177,21 @@ class Light(Empty):
             self.output_illuminate(hout)
 
 
-def node_factory(ob, global_lights, local_lights, renderables):
+def node_factory(ob, nodes):
     ob_type = ob.getType()
     if ob_type == 'Mesh':
-        renderables.append(Mesh(ob))
+        nodes['renderables'].append(Mesh(ob))
     elif ob_type == 'Lamp':
-        light_handle = len(global_lights)+len(local_lights)+1
+        light_handle = len(nodes['global_lights'])+len(nodes['local_lights'])+1
         if (ob.data.mode & Blender.Lamp.Modes["Layer"]) == 0:
-            global_lights.append(Light(ob, light_handle, True))
+            nodes['global_lights'].append(Light(ob, light_handle, True))
         else:
-            local_lights.append(Light(ob, light_handle))
+            nodes['local_lights'].append(Light(ob, light_handle))
     else:
-        renderables.append(Empty(ob))
+        nodes['renderables'].append(Empty(ob))
 
 
-def export(filename, scene):
-    # Create list of lights and renderable objects
-    global_lights = []
-    local_lights = []
-    renderables = []
-    for ob in scene.objects:
-        node_factory(ob, global_lights, local_lights, renderables)
-    nodes = [ global_lights, local_lights, renderables ]
-
-    # Change blender state to facilitate export
-    for nodelist in nodes:
-        for node in nodelist:
-            node.initialize()
-
-    # Output header
-    hout = rib.RIB(open(filename, 'w'))
+def output_screen_setup(hout, scene):
     context = scene.getRenderingContext()
     size_x = context.imageSizeX()
     size_y = context.imageSizeY()
@@ -218,29 +203,55 @@ def export(filename, scene):
     else:
         hout.output("ScreenWindow", -far, far, -1., 1.)
 
-    hout.output("FrameBegin", 0)
+def collect_nodes(scene):
+    nodes = { 'global_lights':[], 'local_lights':[], 'renderables':[] }
+    for ob in scene.objects:
+        node_factory(ob, nodes)
+    
+    for nodelist in nodes.itervalues():
+        for node in nodelist:
+            node.initialize()
+
+    return nodes
+
+def cleanup_nodes(nodes):
+    for nodelist in nodes.itervalues():
+        for node in nodelist:
+            node.cleanup()
+
+def output_frame(hout, frame, scene, nodes):
+    hout.output("FrameBegin", frame)
     camera = scene.objects.camera
     export_camera(hout, camera)
-
+    
     hout.output("WorldBegin")
-
+    
     # Now output nodes
-    for nodelist in global_lights, local_lights:
+    for nodelist in nodes['global_lights'], nodes['local_lights']:
         for node in nodelist:
             node.output(hout)
-    for node in renderables:
+    for node in nodes['renderables']:
         hout.output("AttributeBegin")
-        for l in local_lights:
+        for l in nodes['local_lights']:
             if (node.ob.Layers & l.ob.Layers) != 0:
                 l.output_illuminate(hout)
         node.output(hout)
         hout.output("AttributeEnd")
-
+    
     hout.output("WorldEnd")
     hout.output("FrameEnd")
+
+
+def export(filename, scene):
+    hout = rib.RIB(open(filename, 'w'))
+
+    nodes = collect_nodes(scene)
+    output_screen_setup(hout, scene)
+
+    frame = 0
+    output_frame(hout, frame, scene, nodes)
+
+    cleanup_nodes(nodes)
+
     hout.close()
 
-    # Change blender state to facilitate export
-    for nodelist in nodes:
-        for node in nodelist:
-            node.cleanup()
