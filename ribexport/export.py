@@ -150,8 +150,9 @@ class Light(Empty):
 
     def __init__(self, ob, light_handle, isglobal=False):
         super(Light, self).__init__(ob)
-        self.light = light_handle
-        self.isglobal = isglobal
+        self._light = light_handle
+        self._isglobal = isglobal
+        self._isvalid = True
 
     def output_lightsource_shader(self, hout):
         try:
@@ -159,18 +160,20 @@ class Light(Empty):
             lightsource_shader = ribdata['LightSource']
             lightsource_params = ribdata['LightSourceParams']
             param_list = shader_params(lightsource_params, self.ob)
-            hout.output("LightSource", lightsource_shader, self.light, *param_list)
+            hout.output("LightSource", lightsource_shader, self._light, *param_list)
+            self._isvalid = True
         except:
-            pass
+            self._isvalid = False
 
     def output_illuminate(self, hout):
-        hout.output("Illuminate", self.light, 1)
+        if self._isvalid:
+            hout.output("Illuminate", self._light, 1)
 
     def output(self, hout):
         self.transform_begin(hout)
         self.output_lightsource_shader(hout)
         self.transform_end(hout)
-        if self.isglobal:
+        if self._isglobal:
             self.output_illuminate(hout)
 
 
@@ -229,7 +232,7 @@ def export(filename, scene):
         hout.output("AttributeBegin")
         for l in local_lights:
             if (node.ob.Layers & l.ob.Layers) != 0:
-                hout.output("Illuminate", l.light, 1)
+                l.output_illuminate(hout)
         node.output(hout)
         hout.output("AttributeEnd")
 
