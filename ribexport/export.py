@@ -191,8 +191,7 @@ def node_factory(ob, nodes):
         nodes['renderables'].append(Empty(ob))
 
 
-def output_screen_setup(hout, scene):
-    context = scene.getRenderingContext()
+def output_screen_setup(hout, context):
     size_x = context.imageSizeX()
     size_y = context.imageSizeY()
     par = float(context.aspectRatioX()) / float(context.aspectRatioY())
@@ -241,17 +240,33 @@ def output_frame(hout, frame, scene, nodes):
     hout.output("WorldEnd")
     hout.output("FrameEnd")
 
+def create_rib_handler(filename, context, cur_frame):
+    hfile = open(filename, 'w')
+    if context.motionBlur:
+        hout = rib.MotionRIB(hfile, 2, 0., context.mblurFactor)
+        start_frame = cur_frame+0
+        end_frame = cur_frame+2
+    else:
+        hout = rib.RIB(hfile)
+        start_frame = cur_frame+0
+        end_frame = cur_frame+1
+    return hout, start_frame, end_frame
+
 
 def export(filename, scene):
-    hout = rib.RIB(open(filename, 'w'))
+    context = scene.getRenderingContext()
+    cur_frame = Blender.Get('curframe')
+
+    hout, start_frame, end_frame = create_rib_handler(filename, context, cur_frame)
 
     nodes = collect_nodes(scene)
-    output_screen_setup(hout, scene)
+    output_screen_setup(hout, context)
 
-    frame = 0
-    output_frame(hout, frame, scene, nodes)
+    for frame in xrange(start_frame, end_frame):
+        Blender.Set('curframe', frame)
+        output_frame(hout, frame, scene, nodes)
 
     cleanup_nodes(nodes)
 
     hout.close()
-
+    Blender.Set('curframe', cur_frame)
