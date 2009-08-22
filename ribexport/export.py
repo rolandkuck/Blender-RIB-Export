@@ -101,6 +101,9 @@ class Mesh(Empty):
                 mat = self.ob.data.materials[0]
             else:
                 mat = self.ob.getMaterials()[0]
+
+            hout.output("Color", mat.rgbCol)
+
             ribdata = mat.properties[self.property_group]
             surface_shader = ribdata['Surface']
             surface_params = ribdata['SurfaceParams']
