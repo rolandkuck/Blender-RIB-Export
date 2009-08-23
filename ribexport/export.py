@@ -115,24 +115,41 @@ class Mesh(Empty):
         me = Blender.Mesh.New()
         me.getFromObject(self.ob, 0, 1)
         tokens = []
+
         if self.is_subdiv:
             cmd = "SubdivisionMesh"
             tokens.append("catmull-clark")
         else:
             cmd = "PointsPolygons"
+
         tokens.append(map(lambda f: len(f.v), me.faces))
+
         faces = []
         for f in me.faces:
             for v in f.v:
                 faces.append(v.index)
         tokens.append(faces)
+
+        # TODO We do not support tags for sudivisions yet, so just add empty lists
         if self.is_subdiv:
             tokens += [ [], [], [], [] ]
+
         tokens.append("P")
         points = []
         for v in me.verts:
             points += [ v.co[0], v.co[1], v.co[2] ]
         tokens.append(points)
+
+        tokens.append("facevarying normal N")
+        normals = []
+        for f in me.faces:
+            if f.smooth:
+                for v in f.v:
+                    normals += [ v.no[0], v.no[1], v.no[2] ]
+            else:
+                normals += len(f.v) * [ f.no[0], f.no[1], f.no[2] ]
+        tokens.append(normals)
+
         hout.output(cmd, *tokens)
 
     def output(self, hout):
