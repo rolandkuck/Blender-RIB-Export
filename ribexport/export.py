@@ -150,6 +150,26 @@ class Mesh(Empty):
                 normals += len(f.v) * [ f.no[0], f.no[1], f.no[2] ]
         tokens.append(normals)
 
+        if me.faceUV:
+            active_uvlayer = me.activeUVLayer
+            for uvlayer in me.getUVLayerNames():
+                me.activeUVLayer = uvlayer
+                if uvlayer == me.renderUVLayer:
+                    param_name = "facevarying float "
+                else:
+                    param_name = "facevarying float %s_" % uvlayer
+                tokens.append(param_name+'s')
+                uvcoords = []
+                for f in me.faces:
+                    uvcoords += [ x[0] for x in f.uv ]
+                tokens.append(uvcoords)
+                tokens.append(param_name+'t')
+                uvcoords = []
+                for f in me.faces:
+                    uvcoords += [ 1. - x[1] for x in f.uv ]
+                tokens.append(uvcoords)
+            me.activeUVLayer = active_uvlayer
+
         hout.output(cmd, *tokens)
 
     def output(self, hout):
